@@ -80,6 +80,8 @@ type TransferTxResult struct {
 	ToEntry   Entry `json:"to_entry"`
 }
 
+
+var txKey = struct{}{}
 // první exportovaná funkce s konkrétní transakcí ( reprezentuje trasfer peněz  mezi dvěma účty )
 // běží v prasakci protože při transferu pěněz se v databází děje větší množství operací nad
 // různými tabulkami
@@ -90,6 +92,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 	// vytvoření nově db transakce
 	err := store.execTx(ctx, func(q *Queries) error {
 		var err error
+
 		result.Transfer, err = q.CreateTransfer(ctx, CreateTransferParams{
 			FromAccountID: arg.FromAccountID,
 			ToAccountID:   arg.ToAccountID,
@@ -98,6 +101,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		if err != nil {
 			return err
 		}
+
 		// záznam o transakci pro účet ze kterého peníze odešli
 		result.FromEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.FromAccountID,
@@ -108,6 +112,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 			return err
 		}
 		// záznam o transakci pro účet na který se peníze přidaly
+	
 		result.ToEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.ToAccountID,
 			Amount:    arg.Amount,
@@ -118,10 +123,44 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		}
 		// update balance zahrnuje nutnost prevence potenscionálních deadlock v databází
 		// ToDo: update accounts balance
+		// This takes money from account 1
+		// It method with FOR Update so it will lock this record for concurent 
+		// operation until the transaction will be commited or roll back
+
+		if arg.FromAccountID < arg.ToAccountID {
+			result.FromAccount, result.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount )
+		} else {
+			result.ToAccount, result.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount )
+		}
+		
+
 
 		return nil
 	})
 
 	return result, err
+
+}
+
+func addMoney (ctx context.Context, q *Queries, accountID1 int64, amount1 int64, accountID2 int64, amount2 int64) (account1 Account, account2 Account, err error) {
+	account1, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID: accountID1,
+		Amount: amount1,
+	})
+
+	account2, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID: accountID2,
+		Amount: amount2,
+	})
+
+	if err != nil {
+		// it is same like write return account1, account2, err
+		// it will return account without changes so test with this function will fail
+		// because it find out that there are no any changes instantly
+		return    
+	}
+	// This return statement has same logic, like the one above, but this time 
+	// it will returns objects with expected changes.
+	return 
 
 }
