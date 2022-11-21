@@ -27,7 +27,7 @@ func TestTransferTx(t *testing.T) {
 		go func() {
 			// není vhodné kontrolovat errors funkcí které spouští v go rutinách
 			// přímo v go rutině, není pak garantováno, že pokud se to neprovede,
-			// opradu ten test failne, je nutné posílat výsledky errorů v go rutinách
+			// opravdu ten test failne, je nutné posílat výsledky errorů v go rutinách
 			// pomocí chanels zpátky do hlavní go rutiny, kde běží náš test
 			result, err := store.TransferTx(context.Background(), TransferTxParams{
 				FromAccountID: account1.ID,
