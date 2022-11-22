@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -48,4 +49,9 @@ func RandomCurrency() string {
 	// vrátí typ měny podle náhodně vybraného indexu
 	// z intervalu 0 až n -> konec intervalu jsem získal z len() funkce
 	return currencies[rand.Intn(n)]
+}
+
+// Func Random email genrates random email
+func RandomEmail() string {
+	return fmt.Sprintf("%s@email.com", RandomString(6))
 }
