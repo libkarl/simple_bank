@@ -6,22 +6,27 @@ import (
 	"fmt"
 )
 
-// Store provides all functions to execute db queries and transactions
+// Store provides all functions to execute SQL queries and transactions
 // it also stores all combinations which will be using in transactions
 // Queries struct does not support transactions
 // we want extand it about this functionality with
 // adding it inside Store struct it is called composition
 // It is way to extand Queries functionality
 // more prefered than inharitance
-type Store struct {
-	*Queries
+type Store interface {
+	Querier
+	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+
+type SQLStore struct {
 	db *sql.DB
+	*Queries
 }
 
 // Function to create new store object
 
-func NewStore(db *sql.DB) *Store {
-	return &Store{
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{
 		db:      db,
 		Queries: New(db),
 	}
@@ -33,7 +38,7 @@ func NewStore(db *sql.DB) *Store {
 // base on the error returned by that function
 // funkce je loweCase protože ji nebudeme chtít exportovat s package jinak
 // místo toho budu exportovat funkce pro každou specifickou transakci nad databází
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
 	// txOptions je možnosti jak customizovat některé věci pro konkrétní transakci
 	// pokud nic nedefinuji použijí de default
 	tx, err := store.db.BeginTx(ctx, nil)
@@ -80,13 +85,13 @@ type TransferTxResult struct {
 	ToEntry   Entry `json:"to_entry"`
 }
 
-
 var txKey = struct{}{}
+
 // první exportovaná funkce s konkrétní transakcí ( reprezentuje trasfer peněz  mezi dvěma účty )
 // běží v prasakci protože při transferu pěněz se v databází děje větší množství operací nad
 // různými tabulkami
 // It creates a transfer record, add account entries, and update accounts' balance within a single database transaction.
-func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+func (store *SQLStore) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
 	// inicializace prázdného result
 	var result TransferTxResult
 	// vytvoření nově db transakce
@@ -112,7 +117,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 			return err
 		}
 		// záznam o transakci pro účet na který se peníze přidaly
-	
+
 		result.ToEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.ToAccountID,
 			Amount:    arg.Amount,
@@ -124,16 +129,14 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		// update balance zahrnuje nutnost prevence potenscionálních deadlock v databází
 		// ToDo: update accounts balance
 		// This takes money from account 1
-		// It method with FOR Update so it will lock this record for concurent 
+		// It method with FOR Update so it will lock this record for concurent
 		// operation until the transaction will be commited or roll back
 
 		if arg.FromAccountID < arg.ToAccountID {
-			result.FromAccount, result.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount )
+			result.FromAccount, result.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount)
 		} else {
-			result.ToAccount, result.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount )
+			result.ToAccount, result.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount)
 		}
-		
-
 
 		return nil
 	})
@@ -142,14 +145,14 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 
 }
 
-func addMoney (ctx context.Context, q *Queries, accountID1 int64, amount1 int64, accountID2 int64, amount2 int64) (account1 Account, account2 Account, err error) {
+func addMoney(ctx context.Context, q *Queries, accountID1 int64, amount1 int64, accountID2 int64, amount2 int64) (account1 Account, account2 Account, err error) {
 	account1, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-		ID: accountID1,
+		ID:     accountID1,
 		Amount: amount1,
 	})
 
 	account2, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
-		ID: accountID2,
+		ID:     accountID2,
 		Amount: amount2,
 	})
 
@@ -157,10 +160,10 @@ func addMoney (ctx context.Context, q *Queries, accountID1 int64, amount1 int64,
 		// it is same like write return account1, account2, err
 		// it will return account without changes so test with this function will fail
 		// because it find out that there are no any changes instantly
-		return    
+		return
 	}
-	// This return statement has same logic, like the one above, but this time 
+	// This return statement has same logic, like the one above, but this time
 	// it will returns objects with expected changes.
-	return 
+	return
 
 }
