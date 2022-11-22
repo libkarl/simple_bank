@@ -43,7 +43,7 @@ func RandomMoney() int64 {
 // Random Currency generates random currency
 
 func RandomCurrency() string {
-	currencies := []string{"USD", "EUR", "CAD"}
+	currencies := []string{EUR, USD, CAD}
 	n := len(currencies)
 	// vrátí typ měny podle náhodně vybraného indexu
 	// z intervalu 0 až n -> konec intervalu jsem získal z len() funkce
