@@ -18,15 +18,15 @@ func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
 	// Here i got access to the actual used validate engine for GIN framework
-	// , at the end with .(*validator.Validate) will convert the output to the type *validator.Validate 
+	// , at the end with .(*validator.Validate) will convert the output to the type *validator.Validate
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		// The first argument is the name of the validation tag, the second argument is 
+		// The first argument is the name of the validation tag, the second argument is
 		// custom custom validation function wihich will be registe for this specific tag
 		// so if for struct field inside request will be used tag like this-> binding:"currency"
 		// then the GIN framework will use my custom currency validator
 		v.RegisterValidation("currency", validCurrency)
 	}
-
+	router.POST("/users", server.createUser)
 	router.POST("/accounts", server.createAccount)
 	router.GET("/accounts/:id", server.getAccountByID)
 	router.GET("/accounts", server.listAccount)

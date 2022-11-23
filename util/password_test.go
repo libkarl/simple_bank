@@ -9,14 +9,22 @@ import (
 
 func TestPassword(t *testing.T) {
 	password := RandomString(6)
-	hashedPassword, err := HashPassword(password)
+	hashedPassword1, err := HashPassword(password)
 	require.NoError(t, err)
-	require.NotEmpty(t, hashedPassword)
+	require.NotEmpty(t, hashedPassword1)
 
-	err = CheckPassword(password, hashedPassword)
+	err = CheckPassword(password, hashedPassword1)
 	require.NoError(t, err)
 
 	wrongPassword := RandomString(6)
-	err = CheckPassword(wrongPassword, hashedPassword)
+	err = CheckPassword(wrongPassword, hashedPassword1)
 	require.EqualError(t, err, bcrypt.ErrMismatchedHashAndPassword.Error())
+
+	// je nutné, aby funkce vytvářející hash z hesla od uživatele nikdy nevygenerovala
+	// 2x stejný... !!
+	hashedPassword2, err := HashPassword(password)
+	require.NoError(t, err)
+	require.NotEmpty(t, hashedPassword2)
+	require.NotEqual(t, hashedPassword1, hashedPassword2)
+
 }

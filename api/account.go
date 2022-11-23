@@ -43,7 +43,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 			}
 		}
 		// pokud chyba není způsobena neexistujícím uživatelem, ke kterému mají účty povinný vztah,
-		// ani snaha vytvořit účet uživateli s měnou, který už existuje vrátí se Status 500
+		// ani snaha vytvořit účet uživateli s měnou, který už existuje vrátí se Status
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
