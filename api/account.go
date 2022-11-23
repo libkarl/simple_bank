@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	db "github.com/karlib/simple_bank/db/sqlc"
+	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
@@ -31,7 +32,20 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ctx, arg)
 	if err != nil {
+		// zde je třeba vracející se erro převést na pq Error, aby server nevracel status 500
+		// což je chyba na straně serveru, jelikož tento error se vrací pokud není danný uživatel v databázi,
+		// což je chyba na straně klienta, takže by se mělo vracet spíš něco jako 403 (StatusForbidden)
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+		}
+		// pokud chyba není způsobena neexistujícím uživatelem, ke kterému mají účty povinný vztah,
+		// ani snaha vytvořit účet uživateli s měnou, který už existuje vrátí se Status 500
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
 	}
 
 	ctx.JSON(http.StatusOK, account)
