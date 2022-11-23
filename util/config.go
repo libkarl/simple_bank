@@ -1,6 +1,8 @@
 package util
 
-import "github.com/spf13/viper"
+import (
+	"github.com/spf13/viper"
+)
 
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or enviroment variables.

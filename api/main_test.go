@@ -1,9 +1,10 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"os"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 // it is used to set gin for using testmode insted of debug

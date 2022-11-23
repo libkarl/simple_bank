@@ -1,0 +1,78 @@
+
+
+Token-based Authentication 
+1.POST /users/login {username, password}
+-client will make the first req to login user
+2. Server will check i user informations are correct. If they are the 
+server will create and sign a token with its secret or private key 
+3. Server response with status code :200 {access_token: JWT / PASSETO}
+4. Client can use this access_token to access resources for authenticated users
+example: He will want to list of all accounts which belongs to him
+GET /accounts Header{Authorization: Bearer <access_token>} Body{}
+5. Server will validate token from client request. If it is valid. 
+The response will be with status code :200  with required data from
+the user request. 
+So body response is {accounts: [account1, account2]}
+
+The token have lifetime duration, in this period the user can 
+send multiple request with this token. When token is expired it is neccessary to 
+generate a new one. 
+
+JWT signint algorithms 
+
+1. Symmetric digital signature algorithm
+- the same secret key is used to sign and verify token
+for local use: iternal services where the secret key can be shared
+Algoritmy - HS256, HS384, HS512
+(HS256 = HMAC + SHA256)
+- THIS TYPE IS THE MOST COMMON 
+(the problem is if there is external service which needs to verify token, because it would mean we ,must give them our secret key)
+
+2. Asymmetric digital signature algorithm ( for cases where we nee verify token also by third part)
+- there are two keys
+- The private key is used to sign token and the public key is for verify token
+In this type of digital signature algorithm we can share our public token with third part
+These kind of signature algorithm has a several group of algorithms 
+such as RS group, PS group, ES group
+
+JWT weaknese 
+1.In these days some of algorithms which can be used for sign JWT token are already known as vunerable
+- so it is neccesary to know which one is safe
+2. It is easy to forgery (padělat)
+- It is because this signing algorithm includes the type of signing algorithm in header
+a, The attacker can just set the alg headet to none to by pass the signature verification process 
+This issue has been identified and fixed in many libraries but it is something you should carefully checked
+when choosing the community developed library for your project  
+
+b, The attacker can set algorithm header to symmetric such as HS256 while the server actually uses asymemetric algorithm such as RSA to sign
+amd verify token 
+
+He will create fake token with symetric header and sign him with server public key. This token can
+be use to access resources on the server. Server normally uses RS256 but it is possible to access private resources because server will verify this kind of token with symetric HS256 instead od RSA because 
+verify process depands on token header. The same token is used by hacker to sign also token payload so verification process will be authorized and server will response with status 200 
+It can be solved by check the algorithm header before verify the token signature. 
+
+PASETO - Platform Agnostic Security Tokens
+It is the best secured alternative to JWT right now. 
+-stronger algorithms (developers do not have to choose the algorithm anymore)
+- they only need to select version of Paseto
+- same as JWT it also has two main categories for two main usecases:
+Paseto verion1. [compatible with legacy systems]
+    1.a local <symetric key>
+    - authenticated encyption (in JWT just base64 )
+    1.b public <asymetric key>
+    - this version of PASETO uses the same approach as JWT, it means 
+    - it does not encripted the token data but only base64-encode it and use the private key to sign the content with digital signature 
+Paseto version 2. [recommended] (The best right now !!)
+    2.a local <symetric key>
+     - authenticated encyption (in JWT just base64 )
+    2.b public <asymemetric key>
+    - this version of PASETO uses the same approach as JWT, it means 
+    - it does not encripted the token data but only base64-encode it and use the private key to sign the content with digital signature 
+    - different digital signature algorithm than 2.a it solved problems with TLS 1.2 (NOW IS TLS 1.3)
+
+Fact
+a,
+- it is no longer vunerable to forgery, because header to change no longer exists
+- So the attacker can not longe set it to none or force server to use different algorithm for verification 
+b, if the local (symetric) type of algorithm is used it is now encrypted no just encoded so attacker can not change token payload without knowing the server secret key
