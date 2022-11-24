@@ -76,3 +76,11 @@ a,
 - it is no longer vunerable to forgery, because header to change no longer exists
 - So the attacker can not longe set it to none or force server to use different algorithm for verification 
 b, if the local (symetric) type of algorithm is used it is now encrypted no just encoded so attacker can not change token payload without knowing the server secret key
+
+
+Authorization rules
+In normal situation this rules have to be implemented in each handler inside the endpoint 
+API -> create account -> logged user can only create account for him/herself
+API -> get aaccount -> logged user can only get accounts that he/she owns
+API -> list accounts -> logged user can only list accounts that belog to him/her
+API -> transfer money -> a logged-in user can only send money from his/her own account

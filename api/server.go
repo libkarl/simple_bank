@@ -13,10 +13,10 @@ import (
 
 // Server servers all http requests for my bank service
 type Server struct {
-	config util.Config
-	store  db.Store
-	router *gin.Engine
-	tokenMaker token.Maker 
+	config     util.Config
+	store      db.Store
+	router     *gin.Engine
+	tokenMaker token.Maker
 }
 
 // NewServer creates a new HTTP server instance and setup routing
@@ -27,11 +27,11 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 	server := &Server{
-		config: config,
-		store: store,
+		config:     config,
+		store:      store,
 		tokenMaker: tokenMaker,
 	}
-	
+
 	// Here i got access to the actual used validate engine for GIN framework
 	// , at the end with .(*validator.Validate) will convert the output to the type *validator.Validate
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -41,22 +41,25 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 		// then the GIN framework will use my custom currency validator
 		v.RegisterValidation("currency", validCurrency)
 	}
-	
+
 	server.setupRouter()
 
 	return server, nil
 }
 
-
 func (server *Server) setupRouter() {
 	router := gin.Default()
-	// all registred routes 
+	// all registred routes
+	// the the first two routes must be public the rest of will be protected by authMiddleware
+
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
-	router.POST("/accounts", server.createAccount)
-	router.GET("/accounts/:id", server.getAccountByID)
-	router.GET("/accounts", server.listAccount)
-	router.POST("/transfers", server.createTransfer)
+
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+	authRoutes.POST("/accounts", server.createAccount)
+	authRoutes.GET("/accounts/:id", server.getAccountByID)
+	authRoutes.GET("/accounts", server.listAccount)
+	authRoutes.POST("/transfers", server.createTransfer)
 	//Add routes to router
 	server.router = router
 }
