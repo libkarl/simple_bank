@@ -14,6 +14,7 @@ WORKDIR /app
 # This will copy binary from first stage with name builder to /app directory as binary with name main
 # The dot at the and says the place where this changes should start
 COPY --from=builder /app/main .
+COPY app.env .
 
 EXPOSE 8080
 CMD ["/app/main"]
